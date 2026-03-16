@@ -1,11 +1,14 @@
 import type {ValidationResult} from "@react-types/shared";
+import type {Key} from "react";
+import type {Meta} from "@storybook/react";
+import type {Pokemon, Animal, User} from "@heroui/stories-utils";
+import type {AutocompleteProps} from "../src";
 
-import React, {Key} from "react";
-import {Meta} from "@storybook/react";
+import React from "react";
 import {useForm} from "react-hook-form";
 import {useFilter} from "@react-aria/i18n";
 import {autocomplete, input, button} from "@heroui/theme";
-import {Pokemon, usePokemonList, animalsData, usersData, Animal, User} from "@heroui/stories-utils";
+import {usePokemonList, animalsData, usersData} from "@heroui/stories-utils";
 import {useAsyncList} from "@react-stately/data";
 import {useInfiniteScroll} from "@heroui/use-infinite-scroll";
 import {PetBoldIcon, SearchLinearIcon, SelectorIcon} from "@heroui/shared-icons";
@@ -13,7 +16,7 @@ import {Avatar} from "@heroui/avatar";
 import {Button} from "@heroui/button";
 import {Form} from "@heroui/form";
 
-import {Autocomplete, AutocompleteItem, AutocompleteProps, AutocompleteSection} from "../src";
+import {Autocomplete, AutocompleteItem, AutocompleteSection} from "../src";
 
 export default {
   title: "Components/Autocomplete",
@@ -208,7 +211,7 @@ const FullyControlledTemplate = () => {
   // Store Autocomplete input value, selected option, open state, and items
   // in a state tracker
   const [fieldState, setFieldState] = React.useState({
-    selectedKey: "",
+    value: "",
     inputValue: "",
     items: animalsData,
   });
@@ -219,15 +222,15 @@ const FullyControlledTemplate = () => {
 
   // Specify how each of the Autocomplete values should change when an
   // option is selected from the list box
-  const onSelectionChange = (key) => {
+  const onChange = (key) => {
     // eslint-disable-next-line no-console
-    console.log(`onSelectionChange ${key}`);
+    console.log(`onChange ${key}`);
     setFieldState((prevState) => {
       let selectedItem = prevState.items.find((option) => option.value === key);
 
       return {
         inputValue: selectedItem?.label || "",
-        selectedKey: key,
+        value: key,
         items: animalsData.filter((item) => startsWith(item.label, selectedItem?.label || "")),
       };
     });
@@ -240,7 +243,7 @@ const FullyControlledTemplate = () => {
     console.log(`onInputChange ${value}`);
     setFieldState((prevState: any) => ({
       inputValue: value,
-      selectedKey: value === "" ? null : prevState.selectedKey,
+      value: value === "" ? null : prevState.value,
       items: animalsData.filter((item) => startsWith(item.label, value)),
     }));
   };
@@ -250,7 +253,7 @@ const FullyControlledTemplate = () => {
     if (menuTrigger === "manual" && isOpen) {
       setFieldState((prevState) => ({
         inputValue: prevState.inputValue,
-        selectedKey: prevState.selectedKey,
+        value: prevState.value,
         items: animalsData,
       }));
     }
@@ -263,11 +266,11 @@ const FullyControlledTemplate = () => {
       items={fieldState.items}
       label="Favorite Animal"
       placeholder="Search an animal"
-      selectedKey={fieldState.selectedKey}
+      value={fieldState.value}
       variant="bordered"
+      onChange={onChange}
       onInputChange={onInputChange}
       onOpenChange={onOpenChange}
-      onSelectionChange={onSelectionChange}
     >
       {(item) => <AutocompleteItem key={item.value}>{item.label}</AutocompleteItem>}
     </Autocomplete>
@@ -435,7 +438,7 @@ const StartContentTemplate = ({color, variant, ...args}: AutocompleteProps) => (
   <Autocomplete
     className="max-w-xs"
     color={color}
-    defaultSelectedKey={"cat"}
+    defaultValue={"cat"}
     label="Favorite Animal"
     startContent={<PetBoldIcon className="text-xl" />}
     variant={variant}
@@ -449,7 +452,7 @@ const EndContentTemplate = ({color, variant, ...args}: AutocompleteProps) => (
   <Autocomplete
     className="max-w-xs"
     color={color}
-    defaultSelectedKey={"cat"}
+    defaultValue={"cat"}
     endContent={<PetBoldIcon className="text-xl" />}
     label="Favorite Animal"
     variant={variant}
@@ -546,7 +549,7 @@ const ItemStartContentTemplate = ({color, variant, ...args}: AutocompleteProps<A
 const ControlledTemplate = ({color, variant, ...args}: AutocompleteProps<Animal>) => {
   const [value, setValue] = React.useState<Key | null>("cat");
 
-  const handleSelectionChange = (key: Key | null) => {
+  const onChange = (key: Key | null) => {
     setValue(key);
   };
 
@@ -557,9 +560,9 @@ const ControlledTemplate = ({color, variant, ...args}: AutocompleteProps<Animal>
         color={color}
         defaultItems={animalsData}
         label="Favorite Animal"
-        selectedKey={value}
+        value={value}
         variant={variant}
-        onSelectionChange={handleSelectionChange}
+        onChange={onChange}
         {...args}
       >
         {(item) => <AutocompleteItem key={item.value}>{item.label}</AutocompleteItem>}
@@ -583,7 +586,7 @@ const CustomItemsTemplate = ({color, variant, ...args}: AutocompleteProps<User>)
     {(item) => (
       <AutocompleteItem key={item.id} textValue={item.name}>
         <div className="flex gap-2 items-center">
-          <Avatar alt={item.name} className="flex-shrink-0" size="sm" src={item.avatar} />
+          <Avatar alt={item.name} className="shrink-0" size="sm" src={item.avatar} />
           <div className="flex flex-col">
             <span className="text-small">{item.name}</span>
             <span className="text-tiny text-default-400">{item.email}</span>
@@ -724,7 +727,7 @@ const CustomStylesTemplate = ({color, variant, ...args}: AutocompleteProps<User>
       {(item) => (
         <AutocompleteItem key={item.id} textValue={item.name}>
           <div className="flex gap-2 items-center">
-            <Avatar alt={item.name} className="flex-shrink-0" size="sm" src={item.avatar} />
+            <Avatar alt={item.name} className="shrink-0" size="sm" src={item.avatar} />
             <div className="flex flex-col">
               <span className="text-small">{item.name}</span>
               <span className="text-tiny text-default-400">{item.email}</span>
@@ -785,7 +788,7 @@ const CustomStylesWithCustomItemsTemplate = ({color, ...args}: AutocompleteProps
         <AutocompleteItem key={item.id} textValue={item.name}>
           <div className="flex justify-between items-center">
             <div className="flex gap-2 items-center">
-              <Avatar alt={item.name} className="flex-shrink-0" size="sm" src={item.avatar} />
+              <Avatar alt={item.name} className="shrink-0" size="sm" src={item.avatar} />
               <div className="flex flex-col">
                 <span className="text-small">{item.name}</span>
                 <span className="text-tiny text-default-400">{item.team}</span>
@@ -813,7 +816,7 @@ const WithReactHookFormTemplate = (args: AutocompleteProps) => {
     handleSubmit,
   } = useForm({
     defaultValues: {
-      withDefaultValue: "cat",
+      withDefaultValue: "dog",
       withoutDefaultValue: "",
       requiredField: "",
     },
@@ -894,7 +897,7 @@ export const ReadOnly = {
 
   args: {
     ...defaultProps,
-    selectedKey: "cat",
+    value: "cat",
     isReadOnly: true,
   },
 };
@@ -904,7 +907,7 @@ export const Disabled = {
 
   args: {
     ...defaultProps,
-    selectedKey: "cat",
+    value: "cat",
     variant: "faded",
     isDisabled: true,
   },
@@ -966,7 +969,7 @@ export const IsInvalid = {
     ...defaultProps,
     isInvalid: true,
     variant: "bordered",
-    defaultSelectedKey: "dog",
+    defaultValue: "dog",
     errorMessage: "Please select a valid animal",
   },
 };
@@ -1037,8 +1040,8 @@ export const WithValidation = {
   args: {
     ...defaultProps,
     label: "Select Cat or Dog",
-    validate: (value) => {
-      if (value.selectedKey == null || value.selectedKey === "cat" || value.selectedKey === "dog") {
+    validate: (v) => {
+      if (v.value == null || v.value === "cat" || v.value === "dog") {
         return;
       }
 

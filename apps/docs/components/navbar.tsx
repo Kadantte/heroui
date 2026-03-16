@@ -1,6 +1,9 @@
 "use client";
 
-import {useRef, useState, FC, ReactNode, Key, useMemo, useCallback} from "react";
+import type {FC, Key, ReactNode} from "react";
+import type {Route} from "@/libs/docs/page";
+
+import {useRef, useState, useMemo, useCallback} from "react";
 import {
   link,
   Navbar as HeroUINavbar,
@@ -16,13 +19,12 @@ import {
   DropdownMenu,
   DropdownItem,
   DropdownTrigger,
-  Chip,
   Divider,
 } from "@heroui/react";
 import {dataFocusVisibleClasses} from "@heroui/theme";
 import {ChevronDownIcon, LinkIcon} from "@heroui/shared-icons";
 import {isAppleDevice} from "@react-aria/utils";
-import {clsx} from "@heroui/shared-utils";
+import {cn} from "@heroui/theme";
 import NextLink from "next/link";
 import {usePathname} from "next/navigation";
 import {motion, AnimatePresence} from "framer-motion";
@@ -31,12 +33,9 @@ import {usePress} from "@react-aria/interactions";
 import {useFocusRing} from "@react-aria/focus";
 import {usePostHog} from "posthog-js/react";
 
-import {FbRoadmapLink} from "./featurebase/fb-roadmap-link";
-
 import {currentVersion} from "@/utils/version";
 import {siteConfig} from "@/config/site";
-import {Route} from "@/libs/docs/page";
-import {LargeLogo, SmallLogo, ThemeSwitch} from "@/components";
+import {Logo, ThemeSwitch} from "@/components";
 import {GithubIcon, SearchLinearIcon} from "@/components/icons";
 import {useIsMounted} from "@/hooks/use-is-mounted";
 import {DocsSidebar} from "@/components/docs/sidebar";
@@ -94,14 +93,18 @@ export const Navbar: FC<NavbarProps> = ({children, routes, mobileRoutes = [], sl
     "/docs/guide/upgrade-to-v2",
   ];
 
-  const navLinkClasses = clsx(
+  const navLinkClasses = cn(
     link({color: "foreground"}),
     "data-[active=true]:text-primary data-[active=true]:font-semibold",
   );
 
   const handleVersionChange = useCallback((key: Key) => {
-    if (key === "v1") {
-      const newWindow = window.open("https://v1.heroui.com", "_blank", "noopener,noreferrer");
+    if (key === "v3") {
+      const newWindow = window.open(
+        "https://v3.heroui.com?ref=heroui-v2",
+        "_blank",
+        "noopener,noreferrer",
+      );
 
       if (newWindow) newWindow.opener = null;
     }
@@ -133,7 +136,7 @@ export const Navbar: FC<NavbarProps> = ({children, routes, mobileRoutes = [], sl
       }
       startContent={
         <SearchLinearIcon
-          className="text-base text-default-400 pointer-events-none flex-shrink-0"
+          className="text-base text-default-400 pointer-events-none shrink-0"
           size={16}
           strokeWidth={2}
         />
@@ -172,8 +175,8 @@ export const Navbar: FC<NavbarProps> = ({children, routes, mobileRoutes = [], sl
           onAction={handleVersionChange}
         >
           <DropdownItem key="v2">v{currentVersion}</DropdownItem>
-          <DropdownItem key="v1" endContent={<LinkIcon />}>
-            v1.0.0
+          <DropdownItem key="v3" endContent={<LinkIcon />}>
+            v3.0.0 (Beta)
           </DropdownItem>
         </DropdownMenu>
       </Dropdown>
@@ -189,8 +192,8 @@ export const Navbar: FC<NavbarProps> = ({children, routes, mobileRoutes = [], sl
   return (
     <HeroUINavbar
       ref={ref}
-      className={clsx({
-        "z-[100001]": isMenuOpen,
+      className={cn({
+        "z-100001": isMenuOpen,
       })}
       classNames={{
         base: "bg-white/[.90] dark:bg-black/[.65]",
@@ -209,26 +212,25 @@ export const Navbar: FC<NavbarProps> = ({children, routes, mobileRoutes = [], sl
             href="/"
             onClick={() => handlePressNavbarItem("Home", "/")}
           >
-            <SmallLogo className="w-6 h-6 md:hidden" />
-            <LargeLogo className="h-5 md:h-6" />
+            <Logo className="h-6" />
           </NextLink>
           {versionDropdown}
-          <Chip
+          {/* <Chip
             as={NextLink}
-            className="hidden sm:flex bg-foreground-100/50 border-1 hover:bg-foreground-100/80 border-foreground-200/50 cursor-pointer"
+            className="hidden sm:flex bg-default-200/50 border-1 hover:bg-default-200/80 border-default-400/50 cursor-pointer"
             classNames={{
               content: "font-semibold text-foreground text-xs ",
             }}
             color="primary"
-            href="/blog/introducing-heroui"
+            href="/blog/v2.8.0"
             variant="flat"
-            onClick={() => handlePressNavbarItem("Introducing HeroUI", "/blog/introducing-heroui")}
+            onClick={() => handlePressNavbarItem("HeroUI v2.8.0", "/blog/v2.8.0")}
           >
-            Introducing HeroUI&nbsp;
+            HeroUI v2.8.0&nbsp;
             <span aria-label="emoji" role="img">
               🔥
             </span>
-          </Chip>
+          </Chip> */}
         </NavbarBrand>
       </NavbarContent>
 
@@ -247,14 +249,14 @@ export const Navbar: FC<NavbarProps> = ({children, routes, mobileRoutes = [], sl
         <NavbarItem className="flex h-full items-center">
           <ThemeSwitch
             classNames={{
-              wrapper: "!text-default-500 dark:!text-default-500",
+              wrapper: "text-default-500! dark:text-default-500!",
             }}
           />
         </NavbarItem>
         <NavbarItem className="flex h-full items-center">
           <button
-            className={clsx(
-              "transition-opacity p-1 hover:opacity-80 rounded-full cursor-pointer outline-none",
+            className={cn(
+              "transition-opacity p-1 hover:opacity-80 rounded-full cursor-pointer outline-solid outline-transparent",
               // focus ring
               ...dataFocusVisibleClasses,
             )}
@@ -334,7 +336,15 @@ export const Navbar: FC<NavbarProps> = ({children, routes, mobileRoutes = [], sl
           </NavbarItem>
 
           <NavbarItem>
-            <FbRoadmapLink className={navLinkClasses} />
+            <NextLink
+              className={navLinkClasses}
+              color="foreground"
+              data-active={pathname.includes("themes")}
+              href="/themes"
+              onClick={() => handlePressNavbarItem("Themes", "/themes")}
+            >
+              Theme
+            </NextLink>
           </NavbarItem>
         </ul>
         <Divider className="h-7 hidden lg:flex" orientation="vertical" />
@@ -353,7 +363,7 @@ export const Navbar: FC<NavbarProps> = ({children, routes, mobileRoutes = [], sl
           <ThemeSwitch
             className="border-1 border-default-200 rounded-full h-full min-w-10 min-h-10 flex items-center justify-center"
             classNames={{
-              wrapper: "!text-default-400 dark:!text-default-500",
+              wrapper: "text-default-400! dark:text-default-500!",
             }}
           />
         </NavbarItem>

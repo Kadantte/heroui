@@ -24,7 +24,6 @@ const spinner = tv({
     dots: "relative rounded-full mx-auto",
     spinnerBars: [
       "absolute",
-      "animate-fade-out",
       "rounded-full",
       "w-[25%]",
       "h-[8%]",
@@ -167,6 +166,11 @@ const spinner = tv({
         dots: ["animate-blink", "spinner-dot-blink-animation"],
       },
       spinner: {},
+      simple: {
+        wrapper: "text-foreground h-5 w-5 animate-spin",
+        circle1: "opacity-25",
+        circle2: "opacity-75",
+      },
     },
   },
   defaultVariants: {
@@ -224,6 +228,86 @@ const spinner = tv({
       size: "lg",
       class: {
         wrapper: "w-12 h-12",
+      },
+    },
+    // Simple variants
+    // Size
+    {
+      variant: "simple",
+      size: "sm",
+      class: {
+        wrapper: "w-5 h-5",
+      },
+    },
+    {
+      variant: "simple",
+      size: "md",
+      class: {
+        wrapper: "w-8 h-8",
+      },
+    },
+    {
+      variant: "simple",
+      size: "lg",
+      class: {
+        wrapper: "w-12 h-12",
+      },
+    },
+    // Color
+    {
+      variant: "simple",
+      color: "current",
+      class: {
+        wrapper: "text-current",
+      },
+    },
+    {
+      variant: "simple",
+      color: "white",
+      class: {
+        wrapper: "text-white",
+      },
+    },
+    {
+      variant: "simple",
+      color: "default",
+      class: {
+        wrapper: "text-default",
+      },
+    },
+    {
+      variant: "simple",
+      color: "primary",
+      class: {
+        wrapper: "text-primary",
+      },
+    },
+    {
+      variant: "simple",
+      color: "secondary",
+      class: {
+        wrapper: "text-secondary",
+      },
+    },
+    {
+      variant: "simple",
+      color: "success",
+      class: {
+        wrapper: "text-success",
+      },
+    },
+    {
+      variant: "simple",
+      color: "warning",
+      class: {
+        wrapper: "text-warning",
+      },
+    },
+    {
+      variant: "simple",
+      color: "danger",
+      class: {
+        wrapper: "text-danger",
       },
     },
   ],

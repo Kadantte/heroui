@@ -1,5 +1,9 @@
+import type {ReactElement} from "react";
+import type {ButtonProps} from "@heroui/button";
+import type {UseToastProps} from "./use-toast";
+
 import {forwardRef} from "@heroui/system";
-import {Button, ButtonProps} from "@heroui/button";
+import {Button} from "@heroui/button";
 import {
   CloseIcon,
   DangerIcon,
@@ -7,17 +11,16 @@ import {
   SuccessIcon,
   WarningIcon,
 } from "@heroui/shared-icons";
-import {AnimatePresence, m, LazyMotion} from "framer-motion";
+import {m} from "framer-motion";
 import {cloneElement, isValidElement} from "react";
 import {Spinner} from "@heroui/spinner";
 
-import {UseToastProps, useToast} from "./use-toast";
-
-const loadFeatures = () => import("framer-motion").then((res) => res.domMax);
+import {useToast} from "./use-toast";
 
 export interface ToastProps extends UseToastProps {}
 
 const iconMap = {
+  default: InfoFilledIcon,
   primary: InfoFilledIcon,
   secondary: InfoFilledIcon,
   success: SuccessIcon,
@@ -27,9 +30,10 @@ const iconMap = {
 
 const Toast = forwardRef<"div", ToastProps>((props, ref) => {
   const {
+    severity,
     Component,
     icon,
-    loadingIcon,
+    loadingComponent,
     domRef,
     endContent,
     color,
@@ -39,6 +43,7 @@ const Toast = forwardRef<"div", ToastProps>((props, ref) => {
     progressBarRef,
     classNames,
     slots,
+    getWrapperProps,
     isProgressBarVisible,
     getToastProps,
     getContentProps,
@@ -48,43 +53,46 @@ const Toast = forwardRef<"div", ToastProps>((props, ref) => {
     getIconProps,
     getMotionDivProps,
     getCloseIconProps,
-    getLoadingIconProps,
+    getLoadingComponentProps,
+    getSpinnerComponentProps,
     isLoading,
   } = useToast({
     ...props,
     ref,
   });
 
-  const customIcon = icon && isValidElement(icon) ? cloneElement(icon, getIconProps()) : null;
-  const IconComponent = iconMap[color] || iconMap.primary;
-  const customLoadingIcon =
-    loadingIcon && isValidElement(loadingIcon)
-      ? cloneElement(loadingIcon, getLoadingIconProps())
+  const customIcon =
+    typeof icon === "function"
+      ? icon(getIconProps())
+      : isValidElement(icon) && cloneElement(icon as ReactElement, getIconProps());
+
+  const IconComponent = severity ? iconMap[severity] : iconMap[color] || iconMap.default;
+
+  const customLoadingComponent =
+    loadingComponent && isValidElement(loadingComponent)
+      ? cloneElement(loadingComponent, getLoadingComponentProps())
       : null;
+
   const loadingIconComponent = isLoading
-    ? customLoadingIcon || (
-        <Spinner
-          aria-label="loadingIcon"
-          classNames={{wrapper: getLoadingIconProps().className}}
-          color={color ?? "default"}
-        />
-      )
+    ? customLoadingComponent || <Spinner {...getSpinnerComponentProps()} />
     : null;
 
   const customCloseIcon =
-    closeIcon && isValidElement(closeIcon) ? cloneElement(closeIcon, {}) : null;
+    typeof closeIcon === "function"
+      ? closeIcon({})
+      : isValidElement(closeIcon) && cloneElement(closeIcon as ReactElement, {});
 
   const toastContent = (
     <Component ref={domRef} {...getToastProps()}>
-      <main {...getContentProps()}>
+      <div {...getContentProps()}>
         {hideIcon && !isLoading
           ? null
           : loadingIconComponent || customIcon || <IconComponent {...getIconProps()} />}
-        <div>
+        <div {...getWrapperProps()}>
           <div {...getTitleProps()}>{props.toast.content.title}</div>
           <div {...getDescriptionProps()}>{props.toast.content.description}</div>
         </div>
-      </main>
+      </div>
       {isProgressBarVisible && (
         <div className={slots.progressTrack({class: classNames?.progressTrack})}>
           <div
@@ -101,27 +109,7 @@ const Toast = forwardRef<"div", ToastProps>((props, ref) => {
   );
 
   return (
-    <>
-      {disableAnimation ? (
-        toastContent
-      ) : (
-        <LazyMotion features={loadFeatures}>
-          <AnimatePresence>
-            <m.div {...getMotionDivProps()}>
-              <m.div
-                key={"inner-div"}
-                animate={{opacity: 1}}
-                exit={{opacity: 0}}
-                initial={{opacity: 0}}
-                transition={{duration: 0.25, ease: "easeOut", delay: 0.1}}
-              >
-                {toastContent}
-              </m.div>
-            </m.div>
-          </AnimatePresence>
-        </LazyMotion>
-      )}
-    </>
+    <>{disableAnimation ? toastContent : <m.div {...getMotionDivProps()}>{toastContent}</m.div>}</>
   );
 });
 

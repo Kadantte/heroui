@@ -117,6 +117,12 @@ By default, the Calendar displays a single month. The `visibleMonths` prop allow
 
 <CodeDemo title="Visible Months" files={calendarContent.visibleMonths} />
 
+### Custom first day of week
+
+By default, the first day of the week is automatically set based on the current locale. This can be changed by setting the `firstDayOfWeek` prop to `'sun'`, `'mon'`, `'tue'`, `'wed'`, `'thu'`, `'fri'`, or `'sat'`.
+
+<CodeDemo title="Custom first day of week" files={calendarContent.firstDayOfWeek} />
+
 ### Page Behaviour
 
 By default, when pressing the next or previous buttons, pagination will advance by the `visibleMonths` value. This behavior can be changed to page by single months instead, by setting `pageBehavior` to `single`.
@@ -238,6 +244,18 @@ Here's the example to customize `topContent` and `bottomContent` to have some pr
       default: "1"
     },
     {
+      attribute: "firstDayOfWeek",
+      type: "sun | mon | tue | wed | thu | fri | sat",
+      description: "The day that starts the week.",
+      default: "-"
+    },
+    {
+      attribute: "selectionAlignment",
+      type: "start | center | end",
+      description: "Determines the alignment of the visible months on initial render based on the current selection or current date if there is no selection.",
+      default: "center"
+    },
+    {
       attribute: "focusedValue",
       type: "DateValue",
       description: "Controls the currently focused date within the calendar.",
@@ -246,7 +264,7 @@ Here's the example to customize `topContent` and `bottomContent` to have some pr
     {
       attribute: "defaultFocusedValue",
       type: "DateValue",
-      description: "The date that is focused when the calendar first mounts (uncountrolled).",
+      description: "The date that is focused when the calendar first mounts (uncontrolled).",
       default: "-"
     },
     {

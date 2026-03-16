@@ -2,7 +2,7 @@
  * Part of this code is taken from @chakra-ui/system ❤️
  */
 
-import {Selection as AriaSharedSelection} from "@react-types/shared";
+import type {Selection as AriaSharedSelection} from "@react-types/shared";
 
 export type As<Props = any> = React.ElementType<Props>;
 export type DOMElements = keyof JSX.IntrinsicElements;
@@ -40,7 +40,7 @@ export type MergeWithAs<
   AsComponent extends As = As,
 > = (RightJoinProps<ComponentProps, AdditionalProps> | RightJoinProps<AsProps, AdditionalProps>) & {
   as?: AsComponent;
-};
+} & React.RefAttributes<any>;
 
 export type InternalForwardRefRenderFunction<
   Component extends As,

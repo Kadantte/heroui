@@ -1,16 +1,28 @@
 import type {SlotsToClasses, ToastSlots, ToastVariantProps} from "@heroui/theme";
+import type {DOMAttributes} from "react";
+import type {ReactRef} from "@heroui/react-utils";
+import type {ReactNode} from "react";
+import type {AriaToastProps} from "@react-aria/toast";
+import type {QueuedToast, ToastState} from "@react-stately/toast";
+import type {MotionProps} from "framer-motion";
+import type {HTMLHeroUIProps, PropGetter} from "@heroui/system";
 
-import {HTMLHeroUIProps, PropGetter, mapPropsVariants, useProviderContext} from "@heroui/system";
-import {toast as toastTheme} from "@heroui/theme";
-import {ReactRef, useDOMRef} from "@heroui/react-utils";
-import {clsx, dataAttr, isEmpty, objectToDeps} from "@heroui/shared-utils";
-import {ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
-import {useToast as useToastAria, AriaToastProps} from "@react-aria/toast";
-import {chain, mergeProps} from "@react-aria/utils";
-import {QueuedToast, ToastState} from "@react-stately/toast";
-import {MotionProps} from "framer-motion";
+import {mapPropsVariants, useProviderContext} from "@heroui/system";
+import {toast as toastTheme, cn} from "@heroui/theme";
+import {useDOMRef} from "@heroui/react-utils";
+import {dataAttr, isEmpty, objectToDeps, mergeProps} from "@heroui/shared-utils";
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
+import {useToast as useToastAria} from "@react-aria/toast";
 import {useHover} from "@react-aria/interactions";
 import {useIsMobile} from "@heroui/use-is-mobile";
+
+export type ToastPlacement =
+  | "bottom-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "top-right"
+  | "top-left"
+  | "top-center";
 
 export interface ToastProps extends ToastVariantProps {
   /**
@@ -24,7 +36,7 @@ export interface ToastProps extends ToastVariantProps {
   /**
    * description of the toast
    */
-  description?: string;
+  description?: ReactNode;
   /**
    * Promise based on which the notification will be styled.
    */
@@ -41,7 +53,7 @@ export interface ToastProps extends ToastVariantProps {
    *    content: "content-classes"
    *    description: "description-classes"
    *    title: "title-classes"
-   *    loadingIcon: "loading-icon-classes",
+   *    loadingComponent: "loading-component-classes",
    *    icon: "icon-classes",
    *    progressTrack: "progress-track-classes",
    *    progressIndicator: "progress-indicator-classes",
@@ -59,15 +71,15 @@ export interface ToastProps extends ToastVariantProps {
   /**
    * Icon to be displayed in the toast - overrides the default icon
    */
-  icon?: ReactNode;
+  icon?: ReactNode | ((props: DOMAttributes<HTMLElement>) => ReactNode);
   /**
    * Icon to be displayed in the close button - overrides the default close icon
    */
-  closeIcon?: ReactNode | ((props: any) => ReactNode);
+  closeIcon?: ReactNode | ((props: DOMAttributes<HTMLElement>) => ReactNode);
   /**
-   * Icon to be displayed in the loading toast - overrides the loading icon
+   * Component to be displayed in the loading toast - overrides the default loading component
    */
-  loadingIcon?: ReactNode;
+  loadingComponent?: ReactNode;
   /**
    * Whether the toast-icon should be hidden.
    * @default false
@@ -92,7 +104,16 @@ export interface ToastProps extends ToastVariantProps {
   /**
    * should apply styles to indicate timeout progress
    */
-  shouldShowTimeoutProgess?: boolean;
+  shouldShowTimeoutProgress?: boolean;
+  /**
+   * The severity of the toast. This changes the icon without having to change the color.
+   * @default "default"
+   */
+  severity?: "default" | "primary" | "secondary" | "success" | "warning" | "danger";
+  /**
+   * Whether the toast is being closed programmatically
+   */
+  isClosing?: boolean;
 }
 
 interface Props<T> extends Omit<HTMLHeroUIProps<"div">, "title">, ToastProps {
@@ -104,14 +125,9 @@ interface Props<T> extends Omit<HTMLHeroUIProps<"div">, "title">, ToastProps {
   setHeights: (val: number[]) => void;
   disableAnimation?: boolean;
   isRegionExpanded: boolean;
-  placement?:
-    | "right-bottom"
-    | "left-bottom"
-    | "center-bottom"
-    | "right-top"
-    | "left-top"
-    | "center-top";
+  placement?: ToastPlacement;
   toastOffset?: number;
+  maxVisibleToasts: number;
 }
 
 export type UseToastProps<T = ToastProps> = Props<T> &
@@ -135,7 +151,7 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
     endContent,
     closeIcon,
     hideIcon = false,
-    placement: placementProp = "right-bottom",
+    placement: placementProp = "bottom-right",
     isRegionExpanded,
     hideCloseButton = false,
     state,
@@ -147,9 +163,13 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
     toastOffset = 0,
     motionProps,
     timeout = 6000,
-    shouldShowTimeoutProgess = false,
+    shouldShowTimeoutProgress = false,
     icon,
     onClose,
+    severity,
+    maxVisibleToasts,
+    loadingComponent,
+    isClosing = false,
     ...otherProps
   } = props;
 
@@ -166,9 +186,9 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
 
   if (isMobile) {
     if (placementProp.includes("top")) {
-      placement = "center-top";
+      placement = "top-center";
     } else {
-      placement = "center-bottom";
+      placement = "bottom-center";
     }
   }
 
@@ -185,9 +205,36 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
     }
   }, []);
 
+  const [isLoading, setIsLoading] = useState<boolean>(!!promiseProp);
+  const [isToastExiting, setIsToastExiting] = useState(false);
+  const hasCalledOnCloseRef = useRef(false);
+
+  useEffect(() => {
+    if (!promiseProp) return;
+    promiseProp.finally(() => {
+      setIsLoading(false);
+    });
+  }, [promiseProp]);
+
+  useEffect(() => {
+    if (isClosing && !isToastExiting) {
+      setIsToastExiting(true);
+    }
+  }, [isClosing, isToastExiting]);
+
+  useEffect(() => {
+    if (isToastExiting && disableAnimation) {
+      state.close(toast.key);
+      if (!hasCalledOnCloseRef.current) {
+        hasCalledOnCloseRef.current = true;
+        onClose?.();
+      }
+    }
+  }, [isToastExiting, disableAnimation, state, toast.key, onClose]);
+
   useEffect(() => {
     const updateProgress = (timestamp: number) => {
-      if (!timeout) {
+      if (!timeout || isLoading) {
         return;
       }
 
@@ -195,7 +242,7 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
         startTime.current = timestamp;
       }
 
-      if (isToastHovered || isRegionExpanded || index != total - 1) {
+      if (isToastHovered || isRegionExpanded) {
         pausedTime.current += timestamp - startTime.current;
         startTime.current = null;
         animationRef.current = requestAnimationFrame(updateProgress);
@@ -207,14 +254,14 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
 
       timeElapsed.current = elapsed;
       if (timeElapsed.current >= timeout) {
-        state.close(toast.key);
+        setIsToastExiting(true);
       }
 
       progressRef.current = Math.min((elapsed / timeout) * 100, 100);
 
       if (progressBarRef.current) {
         progressBarRef.current.style.width = `${
-          shouldShowTimeoutProgess ? progressRef.current : 0
+          shouldShowTimeoutProgress ? progressRef.current : 0
         }%`;
       }
 
@@ -230,23 +277,23 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [timeout, shouldShowTimeoutProgess, state, isToastHovered, index, total, isRegionExpanded]);
-
-  const [isLoading, setIsLoading] = useState<boolean>(!!promiseProp);
-
-  useEffect(() => {
-    if (!promiseProp) return;
-    promiseProp.finally(() => {
-      setIsLoading(false);
-    });
-  }, [promiseProp]);
+  }, [
+    timeout,
+    shouldShowTimeoutProgress,
+    state,
+    isToastHovered,
+    index,
+    total,
+    isRegionExpanded,
+    isLoading,
+    setIsToastExiting,
+  ]);
 
   const Component = as || "div";
-  const loadingIcon: ReactNode = icon;
 
   const domRef = useDOMRef(ref);
-  const baseStyles = clsx(className, classNames?.base);
-  const {toastProps, contentProps, titleProps, descriptionProps, closeButtonProps} = useToastAria(
+  const baseStyles = cn(className, classNames?.base);
+  const {toastProps, contentProps, titleProps, descriptionProps} = useToastAria(
     props,
     state,
     domRef,
@@ -262,9 +309,10 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
 
   // Following was inspired from sonner ❤️
   useLayoutEffect(() => {
-    if (!domRef.current || !mounted) {
+    if (!domRef.current || !mounted || isToastExiting) {
       return;
     }
+
     const toastNode = domRef.current;
     const originalHeight = toastNode.style.height;
 
@@ -285,12 +333,12 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
       updatedHeights.push(newHeight);
     }
     setHeights(updatedHeights);
-  }, [mounted, total, setHeights, index]);
+  }, [mounted, total, setHeights, index, isToastExiting]);
 
   let liftHeight = 4;
 
   for (let idx = index + 1; idx < total; idx++) {
-    liftHeight += heights[idx];
+    liftHeight += heights[idx] || 0;
   }
 
   const frontHeight = heights[heights.length - 1];
@@ -317,8 +365,8 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
   const shouldCloseToast = (offsetX: number, offsetY: number) => {
     const isRight = placement.includes("right");
     const isLeft = placement.includes("left");
-    const isCenterTop = placement === "center-top";
-    const isCenterBottom = placement === "center-bottom";
+    const isCenterTop = placement === "top-center";
+    const isCenterBottom = placement === "bottom-center";
 
     if (
       (isRight && offsetX >= SWIPE_THRESHOLD_X) ||
@@ -333,12 +381,12 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
   const getDragElasticConstraints = (placement: string) => {
     const elasticConstraint = {top: 0, bottom: 0, right: 0, left: 0};
 
-    if (placement === "center-bottom") {
+    if (placement === "bottom-center") {
       elasticConstraint.bottom = 1;
 
       return elasticConstraint;
     }
-    if (placement === "center-top") {
+    if (placement === "top-center") {
       elasticConstraint.top = 1;
 
       return elasticConstraint;
@@ -362,39 +410,70 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
 
   let opacityValue: undefined | number = undefined;
 
-  if ((drag && placement === "center-bottom") || placement === "center-top") {
+  if ((drag && placement === "bottom-center") || placement === "top-center") {
     opacityValue = Math.max(0, 1 - dragValue / (SWIPE_THRESHOLD_Y + 5));
   } else if (drag) {
     opacityValue = Math.max(0, 1 - dragValue / (SWIPE_THRESHOLD_X + 20));
   }
 
   const getToastProps: PropGetter = useCallback(
+    (props = {}) => {
+      const topExtension = 16;
+      const bottomExtension = 16;
+
+      const pseudoElementStyles = {
+        "--top-extension": `${topExtension}px`,
+        "--bottom-extension": `${bottomExtension}px`,
+      };
+
+      return {
+        ref: domRef,
+        className: slots.base({class: cn(baseStyles, classNames?.base)}),
+        "data-has-title": dataAttr(!isEmpty(title)),
+        "data-has-description": dataAttr(!isEmpty(description)),
+        "data-placement": placement,
+        "data-drag-value": dragValue,
+        "data-toast": true,
+        "aria-label": "toast",
+        "data-toast-exiting": dataAttr(isToastExiting),
+        onTransitionEnd: disableAnimation
+          ? undefined
+          : () => {
+              if (!isToastExiting) return;
+              state.close(toast.key);
+              if (!hasCalledOnCloseRef.current) {
+                hasCalledOnCloseRef.current = true;
+                onClose?.();
+              }
+            },
+        style: {
+          opacity: opacityValue,
+          ...pseudoElementStyles,
+        },
+        ...mergeProps(props, otherProps, toastProps, hoverProps),
+      };
+    },
+    [
+      slots,
+      classNames,
+      toastProps,
+      hoverProps,
+      toast,
+      toast.key,
+      opacityValue,
+      isToastExiting,
+      state,
+      toast.key,
+      disableAnimation,
+    ],
+  );
+
+  const getWrapperProps: PropGetter = useCallback(
     (props = {}) => ({
-      ref: domRef,
-      className: slots.base({class: clsx(baseStyles, classNames?.base)}),
-      "data-has-title": dataAttr(!isEmpty(title)),
-      "data-has-description": dataAttr(!isEmpty(description)),
-      "data-placement": placement,
-      "data-drag-value": dragValue,
-      "data-toast": true,
-      "data-animation": toast.animation,
-      "aria-label": "toast",
-      onTransitionEnd: () => {
-        if (toast.animation === "exiting") {
-          const updatedHeights = heights;
-
-          updatedHeights.splice(index, 1);
-          setHeights([...updatedHeights]);
-
-          state.remove(toast.key);
-        }
-      },
-      style: {
-        opacity: opacityValue,
-      },
-      ...mergeProps(props, otherProps, toastProps, hoverProps),
+      className: slots.wrapper({class: classNames?.wrapper}),
+      ...props,
     }),
-    [slots, classNames, toastProps, hoverProps, toast, toast.animation, toast.key, opacityValue],
+    [],
   );
 
   const getIconProps: PropGetter = useCallback(
@@ -406,9 +485,21 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
     [],
   );
 
-  const getLoadingIconProps: PropGetter = useCallback(
+  const getLoadingComponentProps: PropGetter = useCallback(
     (props = {}) => ({
-      className: slots.loadingIcon({class: classNames?.loadingIcon}),
+      className: slots.loadingComponent({class: classNames?.loadingComponent}),
+      "aria-label": "loadingIcon",
+      color: "current",
+      ...props,
+    }),
+    [],
+  );
+
+  const getSpinnerComponentProps: PropGetter = useCallback(
+    (props = {}) => ({
+      classNames: {wrapper: slots.loadingComponent({class: classNames?.loadingComponent})},
+      "aria-label": "loadingIcon",
+      color: "current",
       ...props,
     }),
     [],
@@ -443,13 +534,18 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
       className: slots.closeButton({class: classNames?.closeButton}),
       "aria-label": "closeButton",
       "data-hidden": dataAttr(hideCloseButton),
-      ...mergeProps(props, closeButtonProps, {
-        onPress: chain(() => {
+      ...mergeProps(props, {
+        onPress: () => {
+          setIsToastExiting(true);
+          if (!hasCalledOnCloseRef.current) {
+            hasCalledOnCloseRef.current = true;
+            onClose?.();
+          }
           setTimeout(() => document.body.focus(), 0);
-        }, onClose),
+        },
       }),
     }),
-    [closeButtonProps, onClose],
+    [setIsToastExiting, onClose],
   );
 
   const getCloseIconProps: PropGetter = useCallback(
@@ -470,8 +566,11 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
       "data-drag-value": number;
       className: string;
     } => {
-      const isCloseToEnd = total - index - 1 <= 2;
-      const dragDirection = placement === "center-bottom" || placement === "center-top" ? "y" : "x";
+      const comparingValue = isRegionExpanded
+        ? maxVisibleToasts - 1
+        : Math.min(2, maxVisibleToasts - 1);
+      const isCloseToEnd = total - index - 1 <= comparingValue;
+      const dragDirection = placement === "bottom-center" || placement === "top-center" ? "y" : "x";
       const dragConstraints = {left: 0, right: 0, top: 0, bottom: 0};
       const dragElastic = getDragElasticConstraints(placement);
 
@@ -508,7 +607,10 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
         },
         drag: dragDirection,
         dragConstraints,
-        exit: {opacity: 0},
+        exit: {
+          opacity: 0,
+          transition: {duration: 0.3},
+        },
         initial: {opacity: 0, scale: 1, y: -40 * multiplier},
         transition: {duration: 0.3, ease: "easeOut"},
         variants: toastVariants,
@@ -519,13 +621,7 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
           setDrag(false);
 
           if (shouldCloseToast(offsetX, offsetY)) {
-            const updatedHeights = heights;
-
-            updatedHeights.splice(index, 1);
-            setHeights([...updatedHeights]);
-
-            state.close(toast.key);
-            state.remove(toast.key);
+            setIsToastExiting(true);
 
             return;
           }
@@ -534,9 +630,9 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
         onDrag: (_, info) => {
           let updatedDragValue = 0;
 
-          if (placement === "center-top") {
+          if (placement === "top-center") {
             updatedDragValue = -info.offset.y;
-          } else if (placement === "center-bottom") {
+          } else if (placement === "bottom-center") {
             updatedDragValue = info.offset.y;
           } else if (placement.includes("right")) {
             updatedDragValue = info.offset.x;
@@ -560,11 +656,11 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
       };
     },
     [
-      closeButtonProps,
       total,
       index,
       placement,
       isRegionExpanded,
+      isToastExiting,
       liftHeight,
       multiplier,
       initialHeight,
@@ -577,6 +673,7 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
       shouldCloseToast,
       slots,
       toastOffset,
+      maxVisibleToasts,
     ],
   );
 
@@ -585,8 +682,9 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
     title,
     description,
     icon,
-    loadingIcon,
+    loadingComponent,
     domRef,
+    severity,
     closeIcon,
     classNames,
     color: variantProps["color"],
@@ -598,6 +696,7 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
     isProgressBarVisible: !!timeout,
     total,
     index,
+    getWrapperProps,
     getToastProps,
     getTitleProps,
     getContentProps,
@@ -606,7 +705,8 @@ export function useToast<T extends ToastProps>(originalProps: UseToastProps<T>) 
     getIconProps,
     getMotionDivProps,
     getCloseIconProps,
-    getLoadingIconProps,
+    getLoadingComponentProps,
+    getSpinnerComponentProps,
     progressBarRef,
     endContent,
     slots,

@@ -1,18 +1,18 @@
 import type {AccordionItemVariantProps} from "@heroui/theme";
+import type {HTMLHeroUIProps, PropGetter} from "@heroui/system";
+import type {ReactRef} from "@heroui/react-utils";
+import type {NodeWithProps} from "@heroui/aria-utils";
+import type {TreeState} from "@react-stately/tree";
+import type {AccordionItemBaseProps} from "./base/accordion-item-base";
 
-import {HTMLHeroUIProps, PropGetter, useProviderContext} from "@heroui/system";
+import {useProviderContext} from "@heroui/system";
 import {useFocusRing} from "@react-aria/focus";
-import {accordionItem} from "@heroui/theme";
-import {clsx, callAllHandlers, dataAttr, objectToDeps} from "@heroui/shared-utils";
-import {ReactRef, useDOMRef, filterDOMProps} from "@heroui/react-utils";
-import {NodeWithProps} from "@heroui/aria-utils";
+import {cn, accordionItem} from "@heroui/theme";
+import {callAllHandlers, dataAttr, objectToDeps, chain, mergeProps} from "@heroui/shared-utils";
+import {useDOMRef, filterDOMProps} from "@heroui/react-utils";
 import {useReactAriaAccordionItem} from "@heroui/use-aria-accordion";
 import {useCallback, useMemo} from "react";
-import {chain, mergeProps} from "@react-aria/utils";
 import {useHover, usePress} from "@react-aria/interactions";
-import {TreeState} from "@react-stately/tree";
-
-import {AccordionItemBaseProps} from "./base/accordion-item-base";
 
 export interface Props<T extends object> extends HTMLHeroUIProps<"div"> {
   /**
@@ -134,13 +134,14 @@ export function useAccordionItem<T extends object = {}>(props: UseAccordionItemP
     [isCompact, isDisabled, hideIndicator, disableAnimation, disableIndicatorAnimation, variant],
   );
 
-  const baseStyles = clsx(classNames?.base, className);
+  const baseStyles = cn(classNames?.base, className);
 
   const getBaseProps = useCallback<PropGetter>(
     (props = {}) => {
       return {
         "data-open": dataAttr(isOpen),
         "data-disabled": dataAttr(isDisabled),
+        "data-slot": "base",
         className: slots.base({class: baseStyles}),
         ...mergeProps(
           filterDOMProps(otherProps, {
@@ -162,6 +163,7 @@ export function useAccordionItem<T extends object = {}>(props: UseAccordionItemP
       "data-disabled": dataAttr(isDisabled),
       "data-hover": dataAttr(isHovered),
       "data-pressed": dataAttr(isPressed),
+      "data-slot": "trigger",
       className: slots.trigger({class: classNames?.trigger}),
       onFocus: callAllHandlers(
         handleFocus,
@@ -188,6 +190,7 @@ export function useAccordionItem<T extends object = {}>(props: UseAccordionItemP
       return {
         "data-open": dataAttr(isOpen),
         "data-disabled": dataAttr(isDisabled),
+        "data-slot": "content",
         className: slots.content({class: classNames?.content}),
         ...mergeProps(regionProps, props),
       };
@@ -201,6 +204,7 @@ export function useAccordionItem<T extends object = {}>(props: UseAccordionItemP
         "aria-hidden": dataAttr(true),
         "data-open": dataAttr(isOpen),
         "data-disabled": dataAttr(isDisabled),
+        "data-slot": "indicator",
         className: slots.indicator({class: classNames?.indicator}),
         ...props,
       };
@@ -213,6 +217,7 @@ export function useAccordionItem<T extends object = {}>(props: UseAccordionItemP
       return {
         "data-open": dataAttr(isOpen),
         "data-disabled": dataAttr(isDisabled),
+        "data-slot": "heading",
         className: slots.heading({class: classNames?.heading}),
         ...props,
       };
@@ -225,6 +230,7 @@ export function useAccordionItem<T extends object = {}>(props: UseAccordionItemP
       return {
         "data-open": dataAttr(isOpen),
         "data-disabled": dataAttr(isDisabled),
+        "data-slot": "title",
         className: slots.title({class: classNames?.title}),
         ...props,
       };
@@ -237,6 +243,7 @@ export function useAccordionItem<T extends object = {}>(props: UseAccordionItemP
       return {
         "data-open": dataAttr(isOpen),
         "data-disabled": dataAttr(isDisabled),
+        "data-slot": "subtitle",
         className: slots.subtitle({class: classNames?.subtitle}),
         ...props,
       };

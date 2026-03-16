@@ -1,6 +1,6 @@
 {
   "name": "@heroui/aria-utils",
-  "version": "2.2.8",
+  "version": "2.2.29",
   "description": "A package for managing @react-aria HeroUI utils.",
   "keywords": [
     "aria-utils"
@@ -39,13 +39,10 @@
   },
   "dependencies": {
     "@heroui/system": "workspace:*",
-    "@heroui/shared-utils": "workspace:*",
-    "@heroui/react-rsc-utils": "workspace:*",
-    "@react-aria/utils": "3.27.0",
-    "@react-stately/collections": "3.12.1",
-    "@react-stately/overlays": "3.6.13",
-    "@react-types/overlays": "3.8.12",
-    "@react-types/shared": "3.27.0"
+    "@react-aria/utils": "3.33.1",
+    "@react-stately/collections": "3.12.10",
+    "@react-types/overlays": "3.9.4",
+    "@react-types/shared": "3.33.1"
   },
   "devDependencies": {
     "clean-package": "2.2.0",

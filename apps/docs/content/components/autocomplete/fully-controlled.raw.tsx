@@ -1,5 +1,7 @@
+import type {MenuTriggerAction} from "@heroui/react";
+
 import React from "react";
-import {Autocomplete, AutocompleteItem, MenuTriggerAction} from "@heroui/react";
+import {Autocomplete, AutocompleteItem} from "@heroui/react";
 import {useFilter} from "@react-aria/i18n";
 
 export type FieldState = {
@@ -51,7 +53,7 @@ export default function App() {
 
   // Specify how each of the Autocomplete values should change when an
   // option is selected from the list box
-  const onSelectionChange = (key: React.Key | null) => {
+  const onChange = (key: React.Key | null) => {
     setFieldState((prevState) => {
       let selectedItem = prevState.items.find((option) => option.key === key);
 
@@ -93,9 +95,9 @@ export default function App() {
       placeholder="Search an animal"
       selectedKey={fieldState.selectedKey}
       variant="bordered"
+      onChange={onChange}
       onInputChange={onInputChange}
       onOpenChange={onOpenChange}
-      onSelectionChange={onSelectionChange}
     >
       {(item) => <AutocompleteItem key={item.key}>{item.label}</AutocompleteItem>}
     </Autocomplete>

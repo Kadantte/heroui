@@ -1,25 +1,40 @@
 import * as React from "react";
-import {tv} from "@heroui/theme";
-import clsx from "clsx";
+import {tv, cn} from "@heroui/theme";
 
 import {mapPropsVariants} from "./utils";
 
+/**
+ * Extracts slot names from variant configurations.
+ * Traverses: variants -> variant groups -> variant configs -> slot names
+ * @param {Object} variants - Nested object: { variantName: { value: { slotName: "...", ... } } }
+ * @returns {Object} Map of slot names to empty strings
+ */
 function getSlots(variants) {
-  return variants
-    ? Object.values(variants)
-        .flatMap(Object.values)
-        .reduce((acc, slot) => {
-          if (typeof slot === "object" && slot !== null && !(slot instanceof String)) {
-            Object.keys(slot).forEach((key) => {
-              if (!acc.hasOwnProperty(key)) {
-                acc[key] = "";
-              }
-            });
-          }
+  if (!variants || typeof variants !== "object") return {};
 
-          return acc;
-        }, {})
-    : {};
+  const acc = Object.create(null);
+
+  for (const group of Object.values(variants)) {
+    if (!group || typeof group !== "object") continue;
+
+    for (const config of Object.values(group)) {
+      // Skip non-objects, arrays (which would yield numeric indices), and String objects
+      if (
+        !config ||
+        typeof config !== "object" ||
+        Array.isArray(config) ||
+        config instanceof String
+      ) {
+        continue;
+      }
+
+      for (const slotName of Object.keys(config)) {
+        acc[slotName] = "";
+      }
+    }
+  }
+
+  return acc;
 }
 
 function getClassNamesWithProps({
@@ -69,7 +84,11 @@ function getClassNamesWithProps({
 
   const [baseProps, variantProps] = mapPropsVariants(props, customTv.variantKeys, false);
 
-  const newProps = {...defaultVariants, ...baseProps};
+  const newProps = {
+    ...defaultVariants,
+    ...baseProps,
+    className: cn(defaultVariants?.className, baseProps.className),
+  };
 
   let classNames = {};
 
@@ -77,7 +96,7 @@ function getClassNamesWithProps({
 
   // if no slots, the result is a string
   if (!hasSlots) {
-    newProps.className = clsx(result, props.className);
+    newProps.className = cn(result, newProps.className);
   }
   // if has slots, the result is an object with keys as slots functions
   else {
@@ -90,7 +109,7 @@ function getClassNamesWithProps({
     });
 
     Object.entries(props.classNames ?? {}).forEach(([key, value]) => {
-      classNames[key] = clsx(classNames[key], value);
+      classNames[key] = cn(classNames[key], value);
     });
   }
 
@@ -102,9 +121,19 @@ function getClassNamesWithProps({
 }
 
 export function extendVariants(BaseComponent, styles = {}, opts = {}) {
-  const {variants, defaultVariants, compoundVariants} = styles || {};
+  const {variants, defaultVariants, compoundVariants, slots: directSlots} = styles || {};
 
-  const slots = getSlots(variants);
+  const inheritedVariants = BaseComponent.__variants ?? {};
+
+  const mergedVariants = {
+    ...inheritedVariants,
+    ...variants,
+  };
+
+  const inferredSlots = getSlots(mergedVariants);
+
+  const slots = directSlots ? {...inferredSlots, ...directSlots} : inferredSlots;
+
   const hasSlots = typeof slots === "object" && Object.keys(slots).length !== 0;
 
   const ForwardedComponent = React.forwardRef((originalProps = {}, ref) => {
@@ -112,7 +141,7 @@ export function extendVariants(BaseComponent, styles = {}, opts = {}) {
       getClassNamesWithProps(
         {
           slots,
-          variants,
+          variants: mergedVariants,
           compoundVariants,
           props: originalProps,
           defaultVariants,
@@ -131,7 +160,7 @@ export function extendVariants(BaseComponent, styles = {}, opts = {}) {
     ForwardedComponent.getCollectionNode = (itemProps) => {
       const newProps = getClassNamesWithProps({
         slots,
-        variants,
+        variants: mergedVariants,
         compoundVariants,
         props: itemProps,
         defaultVariants,
@@ -145,6 +174,8 @@ export function extendVariants(BaseComponent, styles = {}, opts = {}) {
 
   // To make dev tools show a proper name
   ForwardedComponent.displayName = `Extended(${BaseComponent.displayName || BaseComponent.name})`;
+
+  ForwardedComponent.__variants = mergedVariants;
 
   return ForwardedComponent;
 }

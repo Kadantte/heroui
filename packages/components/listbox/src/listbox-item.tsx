@@ -1,6 +1,9 @@
-import {useMemo, ReactNode} from "react";
+import type {ReactNode} from "react";
+import type {UseListboxItemProps} from "./use-listbox-item";
 
-import {UseListboxItemProps, useListboxItem} from "./use-listbox-item";
+import {useMemo} from "react";
+
+import {useListboxItem} from "./use-listbox-item";
 import {ListboxSelectedIcon} from "./listbox-selected-icon";
 
 export interface ListboxItemProps<T extends object = object>
@@ -45,7 +48,7 @@ const ListboxItem = (props: ListboxItemProps) => {
 
   return (
     <Component {...getItemProps()}>
-      {startContent}
+      {startContent && <span data-slot="startContent">{startContent}</span>}
       {description ? (
         <div {...getWrapperProps()}>
           <span {...getLabelProps()}>{rendered}</span>
@@ -57,7 +60,7 @@ const ListboxItem = (props: ListboxItemProps) => {
       {isSelectable && !hideSelectedIcon && (
         <span {...getSelectedIconProps()}>{selectedContent}</span>
       )}
-      {endContent}
+      {endContent && <span data-slot="endContent">{endContent}</span>}
     </Component>
   );
 };

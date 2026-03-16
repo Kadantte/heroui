@@ -1,33 +1,36 @@
-import {addToast, Button, ToastProvider} from "@heroui/react";
+import {addToast, ToastProvider, Button} from "@heroui/react";
 import React from "react";
 
 export default function App() {
-  const [placement, setPlacement] = React.useState("right-bottom");
+  const [placement, setPlacement] = React.useState("bottom-right");
 
   return (
     <>
-      <ToastProvider placement={placement} toastOffset={placement.includes("top") ? 60 : 0} />
+      <div className="fixed z-[100]">
+        <ToastProvider placement={placement} toastOffset={placement.includes("top") ? 60 : 0} />
+      </div>
+
       <div className="flex flex-wrap gap-2">
         {[
-          "left-top",
-          "right-top",
-          "center-top",
-          "left-bottom",
-          "right-bottom",
-          "center-bottom",
+          ["Top Left", "top-left"],
+          ["Top Center", "top-center"],
+          ["Top Right", "top-right"],
+          ["Bottom Left", "bottom-left"],
+          ["Bottom Center", "bottom-center"],
+          ["Bottom Right", "bottom-right"],
         ].map((position) => (
           <Button
-            key={position}
+            key={position[1]}
             variant={"flat"}
             onPress={() => {
-              setPlacement(position);
+              setPlacement(position[1]);
               addToast({
                 title: "Toast title",
                 description: "Toast displayed successfully",
               });
             }}
           >
-            {position}
+            {position[0]}
           </Button>
         ))}
       </div>

@@ -1,22 +1,22 @@
 import type {PaginationSlots, PaginationVariantProps, SlotsToClasses} from "@heroui/theme";
 import type {Key, ReactNode, Ref} from "react";
 import type {HTMLHeroUIProps, PropGetter} from "@heroui/system";
-
-import {objectToDeps, Timer} from "@heroui/shared-utils";
-import {useLocale} from "@react-aria/i18n";
-import {
+import type {Timer} from "@heroui/shared-utils";
+import type {
   UsePaginationProps as UseBasePaginationProps,
   PaginationItemValue,
-  PaginationItemType,
 } from "@heroui/use-pagination";
+import type {PressEvent} from "@react-types/shared";
+
+import {objectToDeps} from "@heroui/shared-utils";
+import {PaginationItemType} from "@heroui/use-pagination";
 import {useEffect, useRef, useMemo} from "react";
 import {mapPropsVariants, useProviderContext} from "@heroui/system";
 import {usePagination as useBasePagination} from "@heroui/use-pagination";
 import scrollIntoView from "scroll-into-view-if-needed";
-import {pagination} from "@heroui/theme";
+import {pagination, cn} from "@heroui/theme";
 import {useDOMRef} from "@heroui/react-utils";
-import {clsx, dataAttr} from "@heroui/shared-utils";
-import {PressEvent} from "@react-types/shared";
+import {dataAttr} from "@heroui/shared-utils";
 import {useIntersectionObserver} from "@heroui/use-intersection-observer";
 
 export type PaginationItemRenderProps = {
@@ -195,10 +195,6 @@ export function usePagination(originalProps: UsePaginationProps) {
 
   const cursorTimer = useRef<Timer>();
 
-  const {direction} = useLocale();
-
-  const isRTL = direction === "rtl";
-
   const disableAnimation =
     originalProps?.disableAnimation ?? globalContext?.disableAnimation ?? false;
   const disableCursorAnimation = originalProps?.disableCursorAnimation ?? disableAnimation ?? false;
@@ -318,10 +314,10 @@ export function usePagination(originalProps: UsePaginationProps) {
     [objectToDeps(variantProps), disableCursorAnimation, disableAnimation],
   );
 
-  const baseStyles = clsx(classNames?.base, className);
+  const baseStyles = cn(classNames?.base, className);
 
   const onNext = () => {
-    if (loop && activePage === (isRTL ? 1 : total)) {
+    if (loop && activePage === total) {
       return first();
     }
 
@@ -329,7 +325,7 @@ export function usePagination(originalProps: UsePaginationProps) {
   };
 
   const onPrevious = () => {
-    if (loop && activePage === (isRTL ? total : 1)) {
+    if (loop && activePage === 1) {
       return last();
     }
 
@@ -348,7 +344,7 @@ export function usePagination(originalProps: UsePaginationProps) {
       "data-dots-jump": dotsJump,
       "data-total": total,
       "data-active-page": activePage,
-      className: slots.base({class: clsx(baseStyles, props?.className)}),
+      className: slots.base({class: cn(baseStyles, props?.className)}),
       ...otherProps,
     };
   };
@@ -357,7 +353,7 @@ export function usePagination(originalProps: UsePaginationProps) {
     return {
       ...props,
       "data-slot": "wrapper",
-      className: slots.wrapper({class: clsx(classNames?.wrapper, props?.className)}),
+      className: slots.wrapper({class: cn(classNames?.wrapper, props?.className)}),
     };
   };
 
@@ -390,7 +386,7 @@ export function usePagination(originalProps: UsePaginationProps) {
       ref: (node) => getItemRef(node, props.value),
       "data-slot": "item",
       isActive: props.value === activePage,
-      className: slots.item({class: clsx(classNames?.item, props?.className)}),
+      className: slots.item({class: cn(classNames?.item, props?.className)}),
       onPress: () => {
         if (props.value !== activePage) {
           setPage(props.value);
@@ -405,7 +401,7 @@ export function usePagination(originalProps: UsePaginationProps) {
       ref: cursorRef,
       activePage,
       "data-slot": "cursor",
-      className: slots.cursor({class: clsx(classNames?.cursor, props?.className)}),
+      className: slots.cursor({class: cn(classNames?.cursor, props?.className)}),
     };
   };
 

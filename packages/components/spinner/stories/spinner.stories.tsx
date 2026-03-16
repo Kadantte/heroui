@@ -1,8 +1,10 @@
+import type {Meta} from "@storybook/react";
+import type {SpinnerProps} from "../src";
+
 import React from "react";
-import {Meta} from "@storybook/react";
 import {spinner} from "@heroui/theme";
 
-import {Spinner, SpinnerProps} from "../src";
+import {Spinner} from "../src";
 
 export default {
   title: "Components/Spinner",
@@ -30,7 +32,7 @@ export default {
       control: {
         type: "select",
       },
-      options: ["default", "gradient", "spinner", "wave", "dots"],
+      options: ["default", "simple", "gradient", "spinner", "wave", "dots"],
     },
   },
   decorators: [
@@ -50,6 +52,7 @@ const VariantsTemplate = (args: SpinnerProps) => {
   return (
     <div className="flex flex-wrap items-end gap-8 py-4">
       <Spinner {...args} label="default" variant="default" />
+      <Spinner {...args} label="simple" variant="simple" />
       <Spinner {...args} label="gradient" variant="gradient" />
       <Spinner {...args} label="spinner" variant="spinner" />
       <Spinner {...args} label="wave" variant="wave" />

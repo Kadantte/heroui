@@ -1,10 +1,13 @@
 import type {MappedDateValue} from "@react-types/datepicker";
+import type {Meta} from "@storybook/react";
+import type {DateValue} from "@internationalized/date";
+import type {RadioProps} from "@heroui/radio";
+import type {ValidationResult} from "@react-types/shared";
+import type {DatePickerProps} from "../src";
 
 import React from "react";
-import {Meta} from "@storybook/react";
 import {dateInput, button} from "@heroui/theme";
 import {
-  DateValue,
   getLocalTimeZone,
   isWeekend,
   now,
@@ -17,13 +20,12 @@ import {
 } from "@internationalized/date";
 import {I18nProvider, useDateFormatter, useLocale} from "@react-aria/i18n";
 import {Button, ButtonGroup} from "@heroui/button";
-import {Radio, RadioGroup, RadioProps} from "@heroui/radio";
+import {Radio, RadioGroup} from "@heroui/radio";
 import {cn} from "@heroui/theme";
 import {MoonIcon, SunIcon} from "@heroui/shared-icons";
-import {ValidationResult} from "@react-types/shared";
 import {Form} from "@heroui/form";
 
-import {DatePicker, DatePickerProps} from "../src";
+import {DatePicker} from "../src";
 
 export default {
   title: "Components/DatePicker",
@@ -57,7 +59,7 @@ export default {
       control: {
         type: "select",
       },
-      options: ["inside", "outside", "outside-left"],
+      options: ["inside", "outside", "outside-left", "outside-top"],
     },
     isDisabled: {
       control: {
@@ -69,6 +71,10 @@ export default {
         type: "select",
       },
       options: ["aria", "native"],
+    },
+    firstDayOfWeek: {
+      control: "select",
+      options: [undefined, "sun", "mon", "tue", "wed", "thu", "fri", "sat"],
     },
   },
   decorators: [
@@ -110,6 +116,7 @@ const LabelPlacementTemplate = (args: DatePickerProps) => (
     <DatePicker {...args} description="inside" />
     <DatePicker {...args} description="outside" labelPlacement="outside" />
     <DatePicker {...args} description="outside-left" labelPlacement="outside-left" />
+    <DatePicker {...args} description="outside-top" labelPlacement="outside-top" />
   </div>
 );
 
@@ -691,5 +698,13 @@ export const WithDateInputClassNames = {
     },
     isRequired: true,
     description: "Please enter your birth date",
+  },
+};
+
+export const FirstDayOfWeek = {
+  render: Template,
+  args: {
+    ...defaultProps,
+    firstDayOfWeek: "mon",
   },
 };

@@ -28,10 +28,23 @@ export interface UseDraggableProps {
 export function useDraggable(props: UseDraggableProps): MoveResult {
   const {targetRef, isDisabled = false, canOverflow = false} = props;
   const boundary = useRef({minLeft: 0, minTop: 0, maxLeft: 0, maxTop: 0});
-  let transform = {offsetX: 0, offsetY: 0};
+  const isDragging = useRef(false);
+  const transform = useRef({offsetX: 0, offsetY: 0});
+  const prevTargetRef = useRef<HTMLElement | null>(null);
+
+  // Reset transform when target element changes (e.g., modal closes and reopens)
+  useEffect(() => {
+    const currentTarget = targetRef?.current ?? null;
+
+    if (prevTargetRef.current !== currentTarget) {
+      transform.current = {offsetX: 0, offsetY: 0};
+      prevTargetRef.current = currentTarget;
+    }
+  }, [targetRef?.current]);
 
   const onMoveStart = useCallback(() => {
-    const {offsetX, offsetY} = transform;
+    isDragging.current = true;
+    const {offsetX, offsetY} = transform.current;
 
     const targetRect = targetRef?.current?.getBoundingClientRect();
     const targetLeft = targetRect?.left ?? 0;
@@ -53,14 +66,14 @@ export function useDraggable(props: UseDraggableProps): MoveResult {
       maxLeft,
       maxTop,
     };
-  }, [transform, targetRef?.current]);
+  }, [targetRef]);
 
   const onMove = useCallback(
     (e: MoveMoveEvent) => {
       if (isDisabled) {
         return;
       }
-      const {offsetX, offsetY} = transform;
+      const {offsetX, offsetY} = transform.current;
       const {minLeft, minTop, maxLeft, maxTop} = boundary.current;
       let moveX = offsetX + e.deltaX;
       let moveY = offsetY + e.deltaY;
@@ -70,7 +83,7 @@ export function useDraggable(props: UseDraggableProps): MoveResult {
         moveY = Math.min(Math.max(moveY, minTop), maxTop);
       }
 
-      transform = {
+      transform.current = {
         offsetX: moveX,
         offsetY: moveY,
       };
@@ -79,30 +92,38 @@ export function useDraggable(props: UseDraggableProps): MoveResult {
         targetRef.current.style.transform = `translate(${moveX}px, ${moveY}px)`;
       }
     },
-    [isDisabled, transform, boundary.current, canOverflow, targetRef?.current],
+    [isDisabled, canOverflow, targetRef],
   );
+
+  const onMoveEnd = useCallback(() => {
+    isDragging.current = false;
+  }, []);
 
   const {moveProps} = useMove({
     onMoveStart,
     onMove,
+    onMoveEnd,
   });
 
   const preventDefault = useCallback((e: TouchEvent) => {
-    e.preventDefault();
+    // Only prevent touchmove events if we're actively dragging
+    if (isDragging.current) {
+      e.preventDefault();
+    }
   }, []);
 
   // NOTE: This process is due to the modal being displayed at the bottom instead of the center when opened on mobile sizes.
   // It will become unnecessary once the modal is centered properly.
   useEffect(() => {
     if (!isDisabled) {
-      // Prevent body scroll when dragging at mobile.
+      // Prevent body scroll when dragging at mobile, but only during active dragging.
       document.body.addEventListener("touchmove", preventDefault, {passive: false});
     }
 
     return () => {
       document.body.removeEventListener("touchmove", preventDefault);
     };
-  }, [isDisabled]);
+  }, [isDisabled, preventDefault]);
 
   return {
     moveProps: {

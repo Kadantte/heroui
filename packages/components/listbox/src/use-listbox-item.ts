@@ -1,18 +1,18 @@
 import type {ListboxItemBaseProps} from "./base/listbox-item-base";
 import type {MenuItemVariantProps} from "@heroui/theme";
+import type {Node} from "@react-types/shared";
+import type {ListState} from "@react-stately/list";
+import type {HTMLHeroUIProps, PropGetter} from "@heroui/system";
 
 import {useMemo, useRef, useCallback} from "react";
-import {listboxItem} from "@heroui/theme";
-import {HTMLHeroUIProps, mapPropsVariants, PropGetter, useProviderContext} from "@heroui/system";
+import {listboxItem, cn} from "@heroui/theme";
+import {mapPropsVariants, useProviderContext} from "@heroui/system";
 import {useFocusRing} from "@react-aria/focus";
-import {Node} from "@react-types/shared";
 import {filterDOMProps} from "@heroui/react-utils";
-import {clsx, dataAttr, objectToDeps, removeEvents, warn} from "@heroui/shared-utils";
+import {dataAttr, objectToDeps, removeEvents, mergeProps} from "@heroui/shared-utils";
 import {useOption} from "@react-aria/listbox";
-import {mergeProps} from "@react-aria/utils";
 import {useHover, usePress} from "@react-aria/interactions";
 import {useIsMobile} from "@heroui/use-is-mobile";
-import {ListState} from "@react-stately/list";
 
 interface Props<T extends object> extends ListboxItemBaseProps<T> {
   item: Node<T>;
@@ -45,7 +45,7 @@ export function useListboxItem<T extends object>(originalProps: UseListboxItemPr
     onPressStart,
     onPressEnd,
     onPressChange,
-    onClick: deprecatedOnClick,
+    onClick,
     shouldHighlightOnFocus,
     hideSelectedIcon = false,
     isReadOnly = false,
@@ -67,16 +67,10 @@ export function useListboxItem<T extends object>(originalProps: UseListboxItemPr
 
   const isMobile = useIsMobile();
 
-  if (deprecatedOnClick && typeof deprecatedOnClick === "function") {
-    warn(
-      "onClick is deprecated, please use onPress instead. See: https://github.com/heroui-inc/heroui/issues/4292",
-      "ListboxItem",
-    );
-  }
-
   const {pressProps, isPressed} = usePress({
     ref: domRef,
-    isDisabled: isDisabled,
+    isDisabled,
+    onClick,
     onPress,
     onPressUp,
     onPressStart,
@@ -117,7 +111,7 @@ export function useListboxItem<T extends object>(originalProps: UseListboxItemPr
     [objectToDeps(variantProps), isDisabled, disableAnimation, rendered, description],
   );
 
-  const baseStyles = clsx(classNames?.base, className);
+  const baseStyles = cn(classNames?.base, className);
 
   if (isReadOnly) {
     itemProps = removeEvents(itemProps);
@@ -127,12 +121,21 @@ export function useListboxItem<T extends object>(originalProps: UseListboxItemPr
     (shouldHighlightOnFocus && isFocused) ||
     (isMobile ? isHovered || isPressed : isHovered || (isFocused && !isFocusVisible));
 
+  const handleFocusCapture = (e: React.FocusEvent) => {
+    // If focusing on end content, don't focus the item itself
+    const target = e.target as HTMLElement;
+    const isBlockBubbled =
+      target.closest("[data-slot='startContent']") || target.closest("[data-slot='endContent']");
+
+    if (isBlockBubbled) {
+      e.stopPropagation();
+    }
+  };
+
   const getItemProps: PropGetter = (props = {}) => ({
     ref: domRef,
+    onFocusCapture: handleFocusCapture,
     ...mergeProps(
-      {
-        onClick: deprecatedOnClick,
-      },
       itemProps,
       isReadOnly ? {} : mergeProps(focusProps, pressProps),
       hoverProps,
@@ -148,7 +151,7 @@ export function useListboxItem<T extends object>(originalProps: UseListboxItemPr
     "data-selected": dataAttr(isSelected),
     "data-pressed": dataAttr(isPressed),
     "data-focus-visible": dataAttr(isFocusVisible),
-    className: slots.base({class: clsx(baseStyles, props.className)}),
+    className: slots.base({class: cn(baseStyles, props.className)}),
   });
 
   const getLabelProps: PropGetter = (props = {}) => ({

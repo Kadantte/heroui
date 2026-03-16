@@ -90,7 +90,7 @@ Add the theme switcher to your app.
 "use client";
 
 import {useTheme} from "next-themes";
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 
 export function ThemeSwitcher() {
   const [mounted, setMounted] = useState(false)
@@ -100,7 +100,7 @@ export function ThemeSwitcher() {
     setMounted(true)
   }, [])
 
-  if(!mounted) return null
+  if (!mounted) return null
 
   return (
     <div>
@@ -165,9 +165,17 @@ Add the theme switcher to your app.
 ```jsx
 // components/ThemeSwitcher.tsx
 import {useTheme} from "next-themes";
+import {useEffect, useState} from "react";
 
 export const ThemeSwitcher = () => {
+  const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
 
   return (
     <div>
@@ -203,24 +211,6 @@ Install `@heroui/use-theme` in your project.
     pnpm: 'pnpm add @heroui/use-theme',
   }}
 /> 
-
-### Add the current theme to the main element
-
-```jsx
-// App.tsx or App.jsx
-import React from "react";
-import {useTheme} from "@heroui/use-theme";
-
-export default function App() {
-  const {theme} = useTheme();
-
-  return (
-    <main className={`${theme} text-foreground bg-background`}>
-      <App />
-    </main>
-  )
-}
-```
 
 ### Add the theme switcher
 
